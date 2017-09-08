@@ -115,8 +115,8 @@
 /*****************************************************************
 /* Variables with defaults                                       *
 /*****************************************************************/
-char wlanssid[65] = "Nairobi Garage";
-char wlanpwd[65] = "Livestream";
+char wlanssid[65] = "Wifi";
+char wlanpwd[65] = "Password";
 char current_lang[3] = "en";
 char www_username[65] = "admin";
 char www_password[65] = "feinstaub";

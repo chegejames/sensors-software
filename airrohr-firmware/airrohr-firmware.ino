@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ESP8266WiFi.h>
 #define INTL_DE
 /*****************************************************************
 /* OK LAB Particulate Matter Sensor                              *
@@ -114,9 +115,9 @@
 /*****************************************************************
 /* Variables with defaults                                       *
 /*****************************************************************/
-char wlanssid[65] = "Freifunk-disabled";
-char wlanpwd[65] = "";
-char current_lang[3] = "de";
+char wlanssid[65] = "Nairobi Garage";
+char wlanpwd[65] = "Livestream";
+char current_lang[3] = "en";
 char www_username[65] = "admin";
 char www_password[65] = "feinstaub";
 bool www_basicauth_enabled = 0;
@@ -136,6 +137,7 @@ bool ds18b20_read = 0;
 bool gps_read = 0;
 bool send2dusti = 1;
 bool send2madavi = 1;
+bool send2cfa = 0;
 bool send2sensemap = 0;
 bool send2custom = 0;
 bool send2lora = 1;
@@ -156,6 +158,9 @@ const char* host_dusti = "api.luftdaten.info";
 const char* url_dusti = "/v1/push-sensor-data/";
 int httpPort_dusti = 443;
 
+const char* host_cfa = "api.airquality.codeforafrica.org";
+const char* url_cfa = "/v1/push-sensor-data/";
+int httpPort_cfa = 80;
 // IMPORTANT: NO MORE CHANGES TO VARIABLE NAMES NEEDED FOR EXTERNAL APIS
 
 const char* host_sensemap = "ingress.opensensemap.org";
@@ -696,7 +701,6 @@ void readConfig() {
 				if (json.success()) {
 					debug_out(F("parsed json..."), DEBUG_MIN_INFO, 1);
 					if (json.containsKey("SOFTWARE_VERSION")) { strcpy(version_from_local_config, json["SOFTWARE_VERSION"]); }
-
 #define setFromJSON(key)    if (json.containsKey(#key)) key = json[#key];
 #define strcpyFromJSON(key) if (json.containsKey(#key)) strcpy(key, json[#key]);
 					strcpyFromJSON(current_lang);
@@ -2685,7 +2689,7 @@ void setup() {
 		delay(500);
 		ESP.restart();
 	}
-	autoUpdate();
+	//autoUpdate();
 	create_basic_auth_strings();
 	serialSDS.begin(9600);
 	serialGPS.begin(9600);
@@ -2916,6 +2920,7 @@ void loop() {
 				start_send = micros();
 				if (result_PPD != "") {
 					sendData(data_4_dusti, PPD_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, PPD_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -2933,6 +2938,7 @@ void loop() {
 				start_send = micros();
 				if (result_SDS != "") {
 					sendData(data_4_dusti, SDS_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, SDS_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -2950,6 +2956,7 @@ void loop() {
 				start_send = micros();
 				if (result_PMS != "") {
 					sendData(data_4_dusti, PMS_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, PMS_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -2966,6 +2973,7 @@ void loop() {
 				start_send = micros();
 				if (result_DHT != "") {
 					sendData(data_4_dusti, DHT_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, DHT_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -2982,6 +2990,7 @@ void loop() {
 				start_send = micros();
 				if (result_HTU21D != "") {
 					sendData(data_4_dusti, HTU21D_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, HTU21D_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -2999,6 +3008,7 @@ void loop() {
 				start_send = micros();
 				if (result_BMP != "") {
 					sendData(data_4_dusti, BMP_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, BMP_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -3016,6 +3026,7 @@ void loop() {
 				start_send = micros();
 				if (result_BMP280 != "") {
 					sendData(data_4_dusti, BMP280_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, BMP280_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -3033,6 +3044,7 @@ void loop() {
 				start_send = micros();
 				if (result_BME280 != "") {
 					sendData(data_4_dusti, BME280_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, BME280_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -3051,6 +3063,7 @@ void loop() {
 				start_send = micros();
 				if (result_DS18B20 != "") {
 					sendData(data_4_dusti, BME280_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, BME280_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}
@@ -3069,6 +3082,7 @@ void loop() {
 				start_send = micros();
 				if (result_GPS != "") {
 					sendData(data_4_dusti, GPS_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, GPS_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
 				}

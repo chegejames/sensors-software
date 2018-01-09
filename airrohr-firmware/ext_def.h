@@ -3,8 +3,9 @@
 #define CURRENT_LANG INTL_LANG
 
 // WLAN Konfig
-#define WLANSSID "Freifunk-disabled"
-#define WLANPWD ""
+#define WLANSSID "ssid"
+#define WLANPWD "pass"
+
 
 // BasicAuth Konfig
 #define WWW_USERNAME "admin"
@@ -128,6 +129,12 @@
 #endif
 
 
+// MQ-7 GAS SENSOR
+#define MQ7_READ 0 
+#define MQ7_API_PIN 8
+#define MQ7_A_READ 0
+#define MQ7_D_READ D3
+
 // GPS, bevorzugt Neo-6M
 #define GPS_READ 0
 #define GPS_API_PIN 9
@@ -136,8 +143,16 @@
 #define GPS_PIN_TX D6
 #endif
 
+// GSM
+#define GSM_CAPABLE 0
+#if defined(ESP8266)
+#define FONA_RX D5
+#define FONA_TX D6
+#define FONA_RST D8
+#endif
+
 // Automatische Firmware-Updates über WLAN
-#define AUTO_UPDATE 1
+#define AUTO_UPDATE 0
 
 // OLED Display SSD1306 angeschlossen?
 #define HAS_DISPLAY 0

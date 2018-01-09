@@ -10,6 +10,7 @@ const char INTL_AB_HIER_NUR_ANDERN[] PROGMEM = "Advanced settings (оnly if you 
 const char INTL_SPEICHERN[] PROGMEM = "Save";
 const char INTL_SENSOREN[] PROGMEM = "Sensors";
 const char INTL_SDS011[] PROGMEM = "SDS011 (particulate matter)";
+const char INTL_GSM_CAPABLE[] PROGMEM = "GSM Attached";
 const char INTL_PMS24[] PROGMEM = "PMS3003";
 const char INTL_PMS32[] PROGMEM = "PMS1003, PMS7003";
 const char INTL_PPD42NS[] PROGMEM = "PPD42NS";

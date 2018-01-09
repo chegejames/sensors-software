@@ -156,8 +156,8 @@ class InterruptLock {
 // TX (transmitting) pin on one side goes to RX (receiving) pin on other side
 // SoftSerial RX PIN is D1 and goes to SDS TX
 // SoftSerial TX PIN is D2 and goes to SDS RX
-#define SDS_PIN_RX D1
-#define SDS_PIN_TX D2
+#define SDS_PIN_RX D4
+#define SDS_PIN_TX D5
 #endif
 
 // PMS3003

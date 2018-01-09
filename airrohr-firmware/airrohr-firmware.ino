@@ -1,6 +1,5 @@
-#include <Arduino.h>
 #include <ESP8266WiFi.h>
-#define INTL_DE
+#define INTL_EN
 /*****************************************************************
 /* OK LAB Particulate Matter Sensor                              *
 /*      - nodemcu-LoLin board                                    *
@@ -77,6 +76,7 @@
 #include <SoftwareSerial.h>
 #include <SSD1306.h>
 #include <LiquidCrystal_I2C.h>
+#include <Adafruit_FONA.h>
 #include <base64.h>
 #endif
 #if defined(ARDUINO_SAMD_ZERO)
@@ -115,8 +115,8 @@
 /*****************************************************************
 /* Variables with defaults                                       *
 /*****************************************************************/
-char wlanssid[65] = "Nairobi Garage";
-char wlanpwd[65] = "Livestream";
+char wlanssid[65] = "ssid";
+char wlanpwd[65] = "pass";
 char current_lang[3] = "en";
 char www_username[65] = "admin";
 char www_password[65] = "feinstaub";
@@ -134,6 +134,7 @@ bool bmp_read = 0;
 bool bmp280_read = 0;
 bool bme280_read = 0;
 bool ds18b20_read = 0;
+bool mq7_read=0;
 bool gps_read = 0;
 bool send2dusti = 1;
 bool send2madavi = 1;
@@ -147,6 +148,7 @@ bool auto_update = 0;
 bool has_display = 0;
 bool has_lcd1602 = 0;
 int  debug = 3;
+bool gsm_capable = 0;
 
 long int sample_count = 0;
 
@@ -161,6 +163,7 @@ int httpPort_dusti = 443;
 const char* host_cfa = "api.airquality.codeforafrica.org";
 const char* url_cfa = "/v1/push-sensor-data/";
 int httpPort_cfa = 80;
+
 // IMPORTANT: NO MORE CHANGES TO VARIABLE NAMES NEEDED FOR EXTERNAL APIS
 
 const char* host_sensemap = "ingress.opensensemap.org";
@@ -209,6 +212,7 @@ LiquidCrystal_I2C lcd(0x3F, 16, 2);
 /*****************************************************************/
 #if defined(ESP8266)
 SoftwareSerial serialSDS(SDS_PIN_RX, SDS_PIN_TX, false, 128);
+
 SoftwareSerial serialGPS(GPS_PIN_RX, GPS_PIN_TX, false, 128);
 #endif
 #if defined(ARDUINO_SAMD_ZERO)
@@ -220,7 +224,6 @@ SoftwareSerial serialGPS(GPS_PIN_RX, GPS_PIN_TX, false, 128);
 DHT dht(DHT_PIN, DHT_TYPE);
 
 /*****************************************************************
-/* HTU21D declaration                                            *
 /*****************************************************************/
 HTU21D htu21d;
 
@@ -250,6 +253,17 @@ DallasTemperature ds18b20(&oneWire);
 /*****************************************************************/
 #if defined(ARDUINO_SAMD_ZERO) || defined(ESP8266)
 TinyGPSPlus gps;
+#endif
+
+/*****************************************************************
+/* GSM declaration                                               *
+/*****************************************************************/
+#if defined(ESP8266)
+SoftwareSerial fonaSS(FONA_RX, FONA_TX);
+SoftwareSerial *fonaSerial = &fonaSS;
+Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
+uint8_t GSM_CONNECTED = 1;
+uint8_t GPRS_CONNECTED=1;
 #endif
 
 /*****************************************************************
@@ -341,6 +355,8 @@ String last_value_BME280_T = "";
 String last_value_BME280_H = "";
 String last_value_BME280_P = "";
 String last_value_DS18B20_T = "";
+String last_value_MQ7_L = "";
+String last_value_MQ7_V = "";
 String last_data_string = "";
 
 String last_gps_lat;
@@ -485,6 +501,15 @@ String Float2String(const float value) {
 }
 
 /*****************************************************************
+/* flushSerial                                                   *
+/*****************************************************************/
+void flushSerial() {
+  while (fonaSS.available())
+    fonaSS.read();
+}
+
+
+/*****************************************************************
 /* convert value to json string                                  *
 /*****************************************************************/
 String Value2Json(const String& type, const String& value) {
@@ -627,11 +652,13 @@ void copyExtDef() {
 	strcpyDef(wlanpwd, WLANPWD);
 	strcpyDef(www_username, WWW_USERNAME);
 	strcpyDef(www_password, WWW_PASSWORD);
+  setDef(gsm_capable, GSM_CAPABLE);
 	setDef(www_basicauth_enabled, WWW_BASICAUTH_ENABLED);
 	setDef(dht_read, DHT_READ);
 	setDef(htu21d_read, HTU21D_READ);
 	setDef(ppd_read, PPD_READ);
 	setDef(sds_read, SDS_READ);
+  setDef(mq7_read, MQ7_READ);
 	setDef(pms24_read, PMS24_READ);
 	setDef(pms32_read, PMS32_READ);
 	setDef(bmp_read, BMP_READ);
@@ -708,6 +735,7 @@ void readConfig() {
 					strcpyFromJSON(wlanpwd);
 					strcpyFromJSON(www_username);
 					strcpyFromJSON(www_password);
+          setFromJSON(gsm_capable);
 					setFromJSON(www_basicauth_enabled);
 					setFromJSON(dht_read);
 					setFromJSON(htu21d_read);
@@ -717,6 +745,7 @@ void readConfig() {
 					setFromJSON(pms32_read);
 					setFromJSON(bmp_read);
 					setFromJSON(bmp280_read);
+          setFromJSON(mq7_read);
 					setFromJSON(bme280_read);
 					setFromJSON(ds18b20_read);
 					setFromJSON(gps_read);
@@ -777,11 +806,13 @@ void writeConfig() {
 	copyToJSON_String(wlanpwd);
 	copyToJSON_String(www_username);
 	copyToJSON_String(www_password);
+  copyToJSON_Bool(gsm_capable);
 	copyToJSON_Bool(www_basicauth_enabled);
 	copyToJSON_Bool(dht_read);
 	copyToJSON_Bool(htu21d_read);
 	copyToJSON_Bool(ppd_read);
 	copyToJSON_Bool(sds_read);
+  copyToJSON_Bool(mq7_read);
 	copyToJSON_Bool(pms24_read);
 	copyToJSON_Bool(pms32_read);
 	copyToJSON_Bool(bmp_read);
@@ -1078,6 +1109,7 @@ void webserver_config() {
 		page_content += FPSTR(INTL_SENSOREN);
 		page_content += F("</b><br/>");
 		page_content += form_checkbox("sds_read", FPSTR(INTL_SDS011), sds_read);
+    page_content += form_checkbox("gsm_capable", FPSTR(INTL_GSM_CAPABLE), gsm_capable);
 		page_content += form_checkbox("pms32_read", FPSTR(INTL_PMS32), pms32_read);
 		page_content += form_checkbox("pms24_read", FPSTR(INTL_PMS24), pms24_read);
 		page_content += form_checkbox("dht_read", FPSTR(INTL_DHT22), dht_read);
@@ -1138,6 +1170,7 @@ void webserver_config() {
 		readCharParam(current_lang);
 		readCharParam(www_username);
 		readPasswdParam(www_password);
+    readBoolParam(gsm_capable);
 		readBoolParam(www_basicauth_enabled);
 		readBoolParam(send2dusti);
 		readBoolParam(send2madavi);
@@ -1584,9 +1617,11 @@ void wifiConfig() {
 
 	debug_out(F("------ Result from Webconfig ------"), DEBUG_MIN_INFO, 1);
 	debug_out(F("WLANSSID: "), DEBUG_MIN_INFO, 0); debug_out(wlanssid, DEBUG_MIN_INFO, 1);
+  debug_out(F("GSM :"), DEBUG_MIN_INFO, 0); debug_out(String(gsm_capable), DEBUG_MIN_INFO, 1);
 	debug_out(F("DHT_read: "), DEBUG_MIN_INFO, 0); debug_out(String(dht_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("PPD_read: "), DEBUG_MIN_INFO, 0); debug_out(String(ppd_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("SDS_read: "), DEBUG_MIN_INFO, 0); debug_out(String(sds_read), DEBUG_MIN_INFO, 1);
+  debug_out(F("SDS_read: "), DEBUG_MIN_INFO, 0); debug_out(String(sds_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("BMP_read: "), DEBUG_MIN_INFO, 0); debug_out(String(bmp_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("DS18B20_read: "), DEBUG_MIN_INFO, 0); debug_out(String(ds18b20_read), DEBUG_MIN_INFO, 1);
 	debug_out(F("Dusti: "), DEBUG_MIN_INFO, 0); debug_out(String(send2dusti), DEBUG_MIN_INFO, 1);
@@ -1641,12 +1676,72 @@ void connectWifi() {
 #endif
 }
 
+
+/*****************************************************************
+/* GSM auto connecting script                                   *
+/*****************************************************************/
+void connectGSM(){
+  
+  int retry_count = 0;
+  
+  fonaSerial->begin(4800);
+  if (! fona.begin(*fonaSerial)) {
+    debug_out(F("Couldn't find FONA"), DEBUG_MIN_INFO, 1);
+    debug_out(F("Switch to Wifi"), DEBUG_MIN_INFO, 1);
+    gsm_capable = 0;
+    connectWifi();
+  } else {
+    debug_out(F("FONA is OK"), DEBUG_MIN_INFO, 0);
+  
+    char imei[16] = {0}; // MUST use a 16 character buffer for IMEI!
+    uint8_t imeiLen = fona.getIMEI(imei);
+    if (imeiLen > 0) {
+     debug_out(F("Module IMEI: "), DEBUG_MIN_INFO, 1); debug_out(String(imei),DEBUG_MIN_INFO,1);
+    }
+
+    
+    while((fona.getNetworkStatus() != GSM_CONNECTED) && (retry_count < 40)){
+      delay(3000);
+      retry_count++;
+    }
+
+    if (fona.getNetworkStatus() != GSM_CONNECTED) {
+      display_debug("AP ID: Feinstaubsensor-" + esp_chipid + " - IP: 192.168.4.1");
+      wifiConfig();
+      if (fona.getNetworkStatus() != GSM_CONNECTED) {
+        retry_count = 0;
+        while ((fona.getNetworkStatus() != GSM_CONNECTED) && (retry_count < 20)) {
+          delay(500);
+          debug_out(".", DEBUG_MIN_INFO, 0);
+          retry_count++;
+        }
+        debug_out("", DEBUG_MIN_INFO, 1);
+      }
+    }
+    enableGPRS();
+   }
+}
+
+void enableGPRS(){
+  int retry_count = 0;
+  while((fona.GPRSstate() != GPRS_CONNECTED) && (retry_count < 40)){
+    delay(3000);
+    uint8_t gprs_enabled = fona.enableGPRS(true);
+    uint8_t gprs_state = fona.GPRSstate();
+    debug_out("GPRS: ", DEBUG_MIN_INFO, 0);
+    debug_out(String(gprs_state), DEBUG_MIN_INFO, 0);
+    debug_out(F(" connected ? "), DEBUG_MIN_INFO, 0);
+    debug_out(String(gprs_enabled), DEBUG_MIN_INFO, 0);
+    debug_out(F(" "), DEBUG_MIN_INFO, 1);
+    retry_count++;
+   }
+   
+}
 /*****************************************************************
 /* send data to rest api                                         *
 /*****************************************************************/
 void sendData(const String& data, const int pin, const char* host, const int httpPort, const char* url, const char* basic_auth_string, const String& contentType) {
 #if defined(ESP8266)
-
 	debug_out(F("Start connecting to "), DEBUG_MIN_INFO, 0);
 	debug_out(host, DEBUG_MIN_INFO, 1);
 
@@ -1659,9 +1754,69 @@ void sendData(const String& data, const int pin, const char* host, const int htt
 	request_head += F("Content-Length: "); request_head += String(data.length(), DEC) + "\r\n";
 	request_head += F("Connection: close\r\n\r\n");
 
-	// Use WiFiClient class to create TCP connections
+	// Use GSM or WiFiClient class to create TCP connections
+   
+  if(gsm_capable){
+    delay(3000);
+    int retry_count=0;
+    uint16_t statuscode;
+    int16_t length;
 
-	if (httpPort == 443) {
+    String gprs_request_head = F("X-PIN: "); gprs_request_head += String(pin) + "\\r\\n";
+    gprs_request_head += F("X-Sensor: esp8266-"); gprs_request_head += esp_chipid;
+
+    debug_out(F("Start connecting via GPRS"), DEBUG_MIN_INFO, 1);
+    debug_out(F("HOST "), DEBUG_MIN_INFO, 0);
+    debug_out(host, DEBUG_MIN_INFO, 1);
+    debug_out(F("URL "),DEBUG_MIN_INFO, 0);
+    debug_out(url, DEBUG_MIN_INFO, 1);
+    debug_out(gprs_request_head, DEBUG_MIN_INFO, 1);
+    
+    String post_url = String(host);
+    post_url += String(url);
+    const char* url_copy = post_url.c_str();
+    char gprs_url[strlen(url_copy)];
+    strcpy(gprs_url, url_copy);
+    
+    const char* data_copy = data.c_str();
+    char gprs_data[strlen(data_copy)];
+    strcpy(gprs_data, data_copy);
+
+    debug_out(F("Sending data via gsm"), DEBUG_MIN_INFO, 1); 
+    debug_out(F("http://"), DEBUG_MIN_INFO, 0);
+    debug_out(gprs_url, DEBUG_MIN_INFO, 1);
+    debug_out(gprs_data, DEBUG_MIN_INFO, 1);
+        
+    
+    if(fona.GPRSstate() != GPRS_CONNECTED){
+     enableGPRS();
+    }
+    
+    flushSerial();
+    debug_out(F("## Sending via gsm\n\n"), DEBUG_MIN_INFO, 1);
+    if (!fona.HTTP_POST_start(gprs_url, F("application/json"), gprs_request_head, (uint8_t *) gprs_data, strlen(gprs_data), &statuscode, (uint16_t *)&length)) {
+      debug_out(F("Failed!"), DEBUG_ERROR, 1);
+      return;
+    }
+    while (length > 0) {
+      while (fona.available()) {
+        char c = fona.read();
+        // Serial.write is too slow, we'll write directly to Serial register!
+        #if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
+          loop_until_bit_is_set(UCSR0A, UDRE0); /* Wait until data register empty. */
+          UDR0 = c;
+        #else
+          Serial.write(c);
+          //debug_out(String(c), DEBUG_MAX_INFO, 0);
+        #endif
+          length--;
+          if (! length) break;
+      }
+    }
+    debug_out(F("\n\n## End sending via gsm \n\n"), DEBUG_MIN_INFO, 0);
+    fona.HTTP_POST_end();
+    
+  } else if (httpPort == 443) {
 
 		WiFiClientSecure client_s;
 
@@ -1702,8 +1857,8 @@ void sendData(const String& data, const int pin, const char* host, const int htt
 		client.setTimeout(20000);
 
 		if (!client.connect(host, httpPort)) {
-			debug_out(F("connection failed"), DEBUG_ERROR, 1);
-			return;
+		  debug_out(F("connection failed"), DEBUG_ERROR, 1);
+		  return;
 		}
 
 		debug_out(F("Requesting URL: "), DEBUG_MIN_INFO, 0);
@@ -1711,8 +1866,7 @@ void sendData(const String& data, const int pin, const char* host, const int htt
 		debug_out(esp_chipid, DEBUG_MIN_INFO, 1);
 		debug_out(data, DEBUG_MIN_INFO, 1);
 
-		client.print(request_head);
-
+		client.print(request_head); 
 		client.println(data);
 
 		delay(10);
@@ -1925,6 +2079,49 @@ String sensorDHT() {
 	return s;
 }
 
+/*****************************************************************
+/* read MQ7 sensor values                                      *
+/*****************************************************************/
+String sensorMQ7() {
+  String s = "";
+  int i = 0;
+  
+  int l; //limit
+  int v; //value
+  debug_out(F("Start reading MQ7"), DEBUG_MED_INFO, 1);
+
+  // Check if valid number if non NaN (not a number) will be send.
+
+  last_value_MQ7_L = "";
+  last_value_MQ7_V = "";
+
+
+  while ((i++ < 5) && (s == "")) {
+    
+    v= analogRead(MQ7_A_READ); //reads the analaog value from the CO sensor's AOUT pin
+    l= digitalRead(MQ7_D_READ); //reads the digital value from the CO sensor's DOUT pin
+    
+    if (isnan(l) || isnan(v)) {
+      debug_out(F("MQ7 couldn't be read"), DEBUG_ERROR, 1);
+    } else {
+      debug_out(F("CO value    : "), DEBUG_MIN_INFO, 0);
+      debug_out(String(v) + "ppm", DEBUG_MIN_INFO, 1);
+      debug_out(F("Limit: : "), DEBUG_MIN_INFO, 0);
+      debug_out(String(l) , DEBUG_MIN_INFO, 1);
+      last_value_MQ7_V = Float2String(v);
+      last_value_MQ7_L = Float2String(l);
+      s += Value2Json(F("CO"), last_value_MQ7_V);
+      s += Value2Json(F("Limit"), last_value_MQ7_L);
+      last_value_MQ7_V.remove(last_value_MQ7_V.length() - 1);
+      last_value_MQ7_L.remove(last_value_MQ7_L.length() - 1);
+    }
+  }
+  debug_out(F("------"), DEBUG_MIN_INFO, 1);
+
+  debug_out(F("End reading MQ7"), DEBUG_MED_INFO, 1);
+
+  return s;
+}
 /*****************************************************************
 /* read HTU21D sensor values                                     *
 /*****************************************************************/
@@ -2666,6 +2863,7 @@ bool initBME280(char addr) {
 /* The Setup                                                     *
 /*****************************************************************/
 void setup() {
+  
 	Serial.begin(9600);					// Output to Serial at 9600 baud
 #if defined(ESP8266)
 	Wire.begin(D3, D4);
@@ -2675,14 +2873,17 @@ void setup() {
 #if defined(ARDUINO_SAMD_ZERO)
 	Wire.begin();
 #endif
-	init_display();
-	init_lcd1602();
+	//init_display();
+	//init_lcd1602();
 	copyExtDef();
 	display_debug(F("Reading config from SPIFFS"));
 	readConfig();
 	setup_webserver();
-	display_debug("Connecting to " + String(wlanssid));
-	connectWifi();						// Start ConnectWifi
+  if (gsm_capable){
+    connectGSM();
+  } else { 
+    connectWifi();
+  }
 	if (restart_needed) {
 		display_debug(F("Writing config to SPIFFS and restarting sensor"));
 		writeConfig();
@@ -2692,13 +2893,14 @@ void setup() {
 	//autoUpdate();
 	create_basic_auth_strings();
 	serialSDS.begin(9600);
-	serialGPS.begin(9600);
-	ds18b20.begin();
-	pinMode(PPD_PIN_PM1, INPUT_PULLUP);	// Listen at the designated PIN
-	pinMode(PPD_PIN_PM2, INPUT_PULLUP);	// Listen at the designated PIN
+	//serialGPS.begin(9600);
+	//ds18b20.begin();
+	//pinMode(PPD_PIN_PM1, INPUT_PULLUP);	// Listen at the designated PIN
+	//pinMode(PPD_PIN_PM2, INPUT_PULLUP);	// Listen at the designated PIN
 	dht.begin();	// Start DHT
-	htu21d.begin(); // Start HTU21D
-	delay(10);
+	//htu21d.begin(); // Start HTU21D
+  
+      
 #if defined(ESP8266)
 	debug_out(F("\nChipId: "), DEBUG_MIN_INFO, 0);
 	debug_out(esp_chipid, DEBUG_MIN_INFO, 1);
@@ -2800,6 +3002,7 @@ void loop() {
 	String result_BME280 = "";
 	String result_DS18B20 = "";
 	String result_GPS = "";
+  String result_MQ7 = "";
 	String signal_strength = "";
 
 	unsigned long sum_send_time = 0;
@@ -2830,6 +3033,7 @@ void loop() {
 	}
 
 
+
 	if (((act_milli - starttime_SDS) > sampletime_SDS_ms) || ((act_milli - starttime) > sending_intervall_ms)) {
 		if (sds_read) {
 			debug_out(F("Call sensorSDS"), DEBUG_MAX_INFO, 1);
@@ -2857,6 +3061,11 @@ void loop() {
 			debug_out(F("Call sensorDHT"), DEBUG_MAX_INFO, 1);
 			result_DHT = sensorDHT();			// getting temperature and humidity (optional)
 		}
+
+    if(mq7_read){
+    debug_out(F("Call sensorMQ7"), DEBUG_MAX_INFO, 1);
+    result_MQ7 = sensorMQ7(); // getting CO and Limit (optional)
+  }
 
 		if (htu21d_read) {
 			debug_out(F("Call sensorHTU21D"), DEBUG_MAX_INFO, 1);
@@ -2980,6 +3189,25 @@ void loop() {
 				sum_send_time += micros() - start_send;
 			}
 		}
+   //**************
+   if (mq7_read) {
+     data += result_MQ7;
+      data_4_dusti  = data_first_part + result_MQ7;
+      data_4_dusti.remove(data_4_dusti.length() - 1);
+      data_4_dusti += "]}";
+      if (send2dusti) {
+        debug_out(F("## Sending to luftdaten.info (MQ7): "), DEBUG_MIN_INFO, 1);
+        start_send = micros();
+        if (result_MQ7 != "") {
+          sendData(data_4_dusti, MQ7_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, MQ7_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+        } else {
+          debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);
+        }
+        sum_send_time += micros() - start_send;
+      }
+    }
+   //**************
 		if (htu21d_read) {
 			data += result_HTU21D;
 			data_4_dusti  = data_first_part + result_HTU21D;
@@ -3159,7 +3387,7 @@ void loop() {
 		}
 
 		if ((act_milli - last_update_attempt) > pause_between_update_attempts) {
-			autoUpdate();
+			//autoUpdate();
 		}
 
 		if (! send_failed) { sending_time = (4 * sending_time + sum_send_time) / 5; }
@@ -3167,7 +3395,7 @@ void loop() {
 		debug_out(String(sending_time), DEBUG_MIN_INFO, 1);
 
 
-		if (WiFi.status() != WL_CONNECTED) {  // reconnect if connection lost
+		/**if (WiFi.status() != WL_CONNECTED) {  // reconnect if connection lost
 			int retry_count = 0;
 			debug_out(F("Connection lost, reconnecting "), DEBUG_MIN_INFO, 0);
 			WiFi.reconnect();
@@ -3177,7 +3405,7 @@ void loop() {
 				retry_count++;
 			}
 			debug_out("", DEBUG_MIN_INFO, 1);
-		}
+		}**/
 
 		// Resetting for next sampling
 		last_data_string = data;

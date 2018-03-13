@@ -45,7 +45,7 @@ For the CP2102, this would be the**/ dev / cu.SLAB_USBTOUART**on the Mac, for th
 ## Copy code to the NodeMCU
 Insert the latest code from GitHub into the Arduino IDE.
 *Tip: to copy the code better just click on the **RAW** button*
-https://github.com/opendata-stuttgart/sensors-software/blob/master/esp8266-arduino/ppd42ns-wificonfig-ppd-sds-dht/ppd42ns-wificonfig-ppd-sds-dht.ino
+https://raw.githubusercontent.com/CodeForAfricaLabs/sensors-software/develop/airrohr-firmware/airrohr-firmware.ino
 
 #### Set wifi
 ![Wifi Settings](img/Wifi.jpg)

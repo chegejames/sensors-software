@@ -141,14 +141,14 @@ bool send2madavi = 1;
 bool send2cfa = 0;
 bool send2sensemap = 0;
 bool send2custom = 0;
-bool send2lora = 1;
+bool send2lora = 0;
 bool send2influx = 0;
 bool send2csv = 0;
 bool auto_update = 0;
 bool has_display = 0;
 bool has_lcd1602 = 0;
 int  debug = 3;
-bool gsm_capable = 0;
+
 
 long int sample_count = 0;
 
@@ -171,11 +171,11 @@ String url_sensemap = "/boxes/BOXID/data?luftdaten=1";
 const int httpPort_sensemap = 443;
 char senseboxid[30] = "";
 
-char host_influx[100] = "api.luftdaten.info";
-char url_influx[100] = "/write?db=luftdaten";
+char host_influx[100] = "http://ec2-34-250-53-214.eu-west-1.compute.amazonaws.com";
+char url_influx[100] = "/write?db=airquality";
 int port_influx = 8086;
-char user_influx[100] = "luftdaten";
-char pwd_influx[100] = "info";
+char user_influx[100] = "";
+char pwd_influx[100] = "";
 String basic_auth_influx = "";
 
 char host_custom[100] = "192.168.234.1";
@@ -259,11 +259,19 @@ TinyGPSPlus gps;
 /* GSM declaration                                               *
 /*****************************************************************/
 #if defined(ESP8266)
-SoftwareSerial fonaSS(FONA_RX, FONA_TX);
+SoftwareSerial fonaSS(FONA_TX, FONA_RX);
 SoftwareSerial *fonaSerial = &fonaSS;
 Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
+
 uint8_t GSM_CONNECTED = 1;
-uint8_t GPRS_CONNECTED=1;
+uint8_t GPRS_CONNECTED = 1;
+
+bool gsm_capable = 0;
+char gsm_pin[5] = "";
+
+char gprs_apn[100] = "";
+char gprs_username[100] = "";
+char gprs_password[100] = "";
 #endif
 
 /*****************************************************************
@@ -652,6 +660,10 @@ void copyExtDef() {
 	strcpyDef(wlanpwd, WLANPWD);
 	strcpyDef(www_username, WWW_USERNAME);
 	strcpyDef(www_password, WWW_PASSWORD);
+  strcpyDef(gsm_pin, GSM_PIN);
+  strcpyDef(gprs_apn, GPRS_APN);
+  strcpyDef(gprs_username, GPRS_USERNAME);
+  strcpyDef(gprs_password, GPRS_PASSWORD);
   setDef(gsm_capable, GSM_CAPABLE);
 	setDef(www_basicauth_enabled, WWW_BASICAUTH_ENABLED);
 	setDef(dht_read, DHT_READ);
@@ -736,6 +748,10 @@ void readConfig() {
 					strcpyFromJSON(www_username);
 					strcpyFromJSON(www_password);
           setFromJSON(gsm_capable);
+          strcpyFromJSON(gsm_pin);
+          strcpyFromJSON(gprs_apn);
+          strcpyFromJSON(gprs_username);
+          strcpyFromJSON(gprs_password);
 					setFromJSON(www_basicauth_enabled);
 					setFromJSON(dht_read);
 					setFromJSON(htu21d_read);
@@ -807,6 +823,10 @@ void writeConfig() {
 	copyToJSON_String(www_username);
 	copyToJSON_String(www_password);
   copyToJSON_Bool(gsm_capable);
+  copyToJSON_String(gsm_pin);
+  copyToJSON_String(gprs_apn);
+  copyToJSON_String(gprs_username);
+  copyToJSON_String(gprs_password);
 	copyToJSON_Bool(www_basicauth_enabled);
 	copyToJSON_Bool(dht_read);
 	copyToJSON_Bool(htu21d_read);
@@ -1106,10 +1126,16 @@ void webserver_config() {
 		page_content += form_checkbox("send2dusti", F("API Luftdaten.info"), send2dusti);
 		page_content += form_checkbox("send2madavi", F("API Madavi.de"), send2madavi);
 		page_content += F("<br/><b>");
+    page_content += F("GSM</b><br/>");
+    page_content += form_checkbox("gsm_capable", FPSTR(INTL_GSM_CAPABLE), gsm_capable);
+    page_content += form_input("gsm_pin", FPSTR(INTL_GSM_PIN), gsm_pin, 4);
+    page_content += form_input("gprs_apn", FPSTR(INTL_GPRS_APN), gprs_apn, 100);
+    page_content += form_input("gprs_username", FPSTR(INTL_GPRS_USERNAME), gprs_username, 100);
+    page_content += form_input("gprs_password", FPSTR(INTL_GPRS_PASSWORD), gprs_password, 100);
+    page_content += F("</b><br/>");
 		page_content += FPSTR(INTL_SENSOREN);
 		page_content += F("</b><br/>");
 		page_content += form_checkbox("sds_read", FPSTR(INTL_SDS011), sds_read);
-    page_content += form_checkbox("gsm_capable", FPSTR(INTL_GSM_CAPABLE), gsm_capable);
 		page_content += form_checkbox("pms32_read", FPSTR(INTL_PMS32), pms32_read);
 		page_content += form_checkbox("pms24_read", FPSTR(INTL_PMS24), pms24_read);
 		page_content += form_checkbox("dht_read", FPSTR(INTL_DHT22), dht_read);
@@ -1170,6 +1196,10 @@ void webserver_config() {
 		readCharParam(current_lang);
 		readCharParam(www_username);
 		readPasswdParam(www_password);
+    readCharParam(gsm_pin);
+    readCharParam(gprs_apn);
+    readCharParam(gprs_username);
+    readCharParam(gprs_password);
     readBoolParam(gsm_capable);
 		readBoolParam(www_basicauth_enabled);
 		readBoolParam(send2dusti);
@@ -1480,7 +1510,7 @@ void webserver_reset() {
 }
 
 /*****************************************************************
-/* Webserver data.json                                           *
+/* Webserver                                            *
 /*****************************************************************/
 void webserver_data_json() {
 	debug_out(F("output data json..."), DEBUG_MIN_INFO, 1);
@@ -1687,22 +1717,34 @@ void connectGSM(){
   fonaSerial->begin(4800);
   if (! fona.begin(*fonaSerial)) {
     debug_out(F("Couldn't find FONA"), DEBUG_MIN_INFO, 1);
-    debug_out(F("Switch to Wifi"), DEBUG_MIN_INFO, 1);
+    
+    debug_out(F("Switching to Wifi"), DEBUG_MIN_INFO, 1);
     gsm_capable = 0;
     connectWifi();
   } else {
     debug_out(F("FONA is OK"), DEBUG_MIN_INFO, 0);
-  
+
+    unlock_pin();
+ 
+    fona.setGPRSNetworkSettings(FPSTR(gprs_apn), FPSTR(gprs_username), FPSTR(gprs_password));
+    
     char imei[16] = {0}; // MUST use a 16 character buffer for IMEI!
     uint8_t imeiLen = fona.getIMEI(imei);
     if (imeiLen > 0) {
      debug_out(F("Module IMEI: "), DEBUG_MIN_INFO, 1); debug_out(String(imei),DEBUG_MIN_INFO,1);
     }
 
-    
     while((fona.getNetworkStatus() != GSM_CONNECTED) && (retry_count < 40)){
-      delay(3000);
+      Serial.println("Not registered on network");
+      delay(5000);
       retry_count++;
+      
+      if (retry_count > 30){
+        delay(5000);
+        restart_GSM();
+      }
+      
+      flushSerial();
     }
 
     if (fona.getNetworkStatus() != GSM_CONNECTED) {
@@ -1717,26 +1759,55 @@ void connectGSM(){
         }
         debug_out("", DEBUG_MIN_INFO, 1);
       }
-    }
-    enableGPRS();
+    }else{
+      enableGPRS();
    }
+ }
 }
 
 void enableGPRS(){
   int retry_count = 0;
   while((fona.GPRSstate() != GPRS_CONNECTED) && (retry_count < 40)){
     delay(3000);
-    uint8_t gprs_enabled = fona.enableGPRS(true);
-    uint8_t gprs_state = fona.GPRSstate();
-    debug_out("GPRS: ", DEBUG_MIN_INFO, 0);
-    debug_out(String(gprs_state), DEBUG_MIN_INFO, 0);
-    debug_out(F(" connected ? "), DEBUG_MIN_INFO, 0);
-    debug_out(String(gprs_enabled), DEBUG_MIN_INFO, 0);
-    debug_out(F(" "), DEBUG_MIN_INFO, 1);
+    fona.enableGPRS(true);
     retry_count++;
    }
-   
+
+   fona.setGPRSNetworkSettings(FONAFlashStringPtr("internet"), FONAFlashStringPtr(""), FONAFlashStringPtr(""));
 }
+
+void restart_GSM(){
+  
+  flushSerial();
+  
+  fonaSerial->begin(4800);
+  if (! fona.begin(*fonaSerial)) {
+    debug_out(F("Couldn't find FONA"), DEBUG_MIN_INFO, 1);
+    //while (1);
+  }
+  
+  unlock_pin();
+    
+  enableGPRS();
+ 
+}
+
+
+void unlock_pin(){
+  flushSerial();
+  if (strlen(gsm_pin) > 1){
+    debug_out(F("\nAttempting to Unlock SIM please wait: "), DEBUG_MIN_INFO, 1);
+    delay(10000);
+    if (! fona.unlockSIM(gsm_pin)) {
+       debug_out(F("Failed to Unlock SIM card with pin: "), DEBUG_MIN_INFO, 1);
+       debug_out(gsm_pin, DEBUG_MIN_INFO, 1);
+       delay(10000);
+    }
+  }
+  
+}
+
+
 /*****************************************************************
 /* send data to rest api                                         *
 /*****************************************************************/
@@ -1758,7 +1829,7 @@ void sendData(const String& data, const int pin, const char* host, const int htt
    
   if(gsm_capable){
     delay(3000);
-    int retry_count=0;
+    int retry_count = 0;
     uint16_t statuscode;
     int16_t length;
 
@@ -1771,16 +1842,20 @@ void sendData(const String& data, const int pin, const char* host, const int htt
     debug_out(F("URL "),DEBUG_MIN_INFO, 0);
     debug_out(url, DEBUG_MIN_INFO, 1);
     debug_out(gprs_request_head, DEBUG_MIN_INFO, 1);
+
+    const char* data_copy = data.c_str();
+    char gprs_data[strlen(data_copy)];
+    strcpy(gprs_data, data_copy);
+
     
     String post_url = String(host);
     post_url += String(url);
     const char* url_copy = post_url.c_str();
     char gprs_url[strlen(url_copy)];
     strcpy(gprs_url, url_copy);
+
+    Serial.println("POST URL  " + String(gprs_url));
     
-    const char* data_copy = data.c_str();
-    char gprs_data[strlen(data_copy)];
-    strcpy(gprs_data, data_copy);
 
     debug_out(F("Sending data via gsm"), DEBUG_MIN_INFO, 1); 
     debug_out(F("http://"), DEBUG_MIN_INFO, 0);
@@ -1789,13 +1864,17 @@ void sendData(const String& data, const int pin, const char* host, const int htt
         
     
     if(fona.GPRSstate() != GPRS_CONNECTED){
+     debug_out(F("************* Reconnect GPRS *************"), DEBUG_MIN_INFO, 1); 
      enableGPRS();
     }
     
     flushSerial();
     debug_out(F("## Sending via gsm\n\n"), DEBUG_MIN_INFO, 1);
-    if (!fona.HTTP_POST_start(gprs_url, F("application/json"), gprs_request_head, (uint8_t *) gprs_data, strlen(gprs_data), &statuscode, (uint16_t *)&length)) {
-      debug_out(F("Failed!"), DEBUG_ERROR, 1);
+    
+    if (!fona.HTTP_POST_start((char *) gprs_url, F("application/json"), gprs_request_head, (uint8_t *) gprs_data, strlen(gprs_data), &statuscode, (uint16_t *)&length)) {
+      debug_out(F("Failed with status code "), DEBUG_ERROR, 1);
+      debug_out(String(statuscode), DEBUG_ERROR, 1);
+      restart_GSM();
       return;
     }
     while (length > 0) {
@@ -3146,7 +3225,7 @@ void loop() {
 				debug_out(F("## Sending to luftdaten.info (SDS): "), DEBUG_MIN_INFO, 1);
 				start_send = micros();
 				if (result_SDS != "") {
-					sendData(data_4_dusti, SDS_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
+          sendData(data_4_dusti, SDS_API_PIN, host_dusti, httpPort_dusti, url_dusti, "", FPSTR(TXT_CONTENT_TYPE_JSON));
           sendData(data_4_dusti, SDS_API_PIN, host_cfa, httpPort_cfa, url_cfa, "", FPSTR(TXT_CONTENT_TYPE_JSON));
 				} else {
 					debug_out(F("No data sent..."), DEBUG_MIN_INFO, 1);

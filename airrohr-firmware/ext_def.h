@@ -39,11 +39,11 @@
 #define PWD_CUSTOM ""
 
 // Definition eigene InfluxDB
-#define HOST_INFLUX "api.luftdaten.info"
-#define URL_INFLUX "/write?db=luftdaten"
+#define HOST_INFLUX "ec2-34-250-53-214.eu-west-1.compute.amazonaws.com"
+#define URL_INFLUX "/write?db=airquality"
 #define PORT_INFLUX 8086
-#define USER_INFLUX "luftdaten"
-#define PWD_INFLUX "info"
+#define USER_INFLUX ""
+#define PWD_INFLUX ""
 
 // DHT22, Sensor Temperatur und Luftfeuchte
 #define DHT_READ 1
@@ -149,6 +149,11 @@
 #define FONA_RX D5
 #define FONA_TX D6
 #define FONA_RST D8
+#define GPRS_APN ""
+#define GPRS_USERNAME ""
+#define GPRS_PASSWORD ""
+#define GSM_PIN ""
+
 #endif
 
 // Automatische Firmware-Updates über WLAN

@@ -1,81 +1,81 @@
-# Version für Sensoren PPD42NS, SDS011, DHT22, BMP180 und NEO-6M.
+# Version for sensors PPD42NS, SDS011, DHT22, BMP180 and NEO-6M.
 
-Features:
-* gleichzeitiger Betrieb mehrerer Sensoren
-* Konfiguration über WLAN (Sensor als Access Point) möglich
-* Unterstützung von OLED-Displays mit SSD1306
-* Auswahl der API(s), an welche die Daten gesendet werden, inklusive der Möglichkeit, die Daten als CSV über USB auszugeben
-* nutzbar für ESP8266 und Arduino Feather M0 (LoRa)
+features:
+* simultaneous operation of several sensors
+* Configuration via WLAN (sensor as access point) possible
+* Supports OLED displays with SSD1306
+* Select the API (s) to which the data will be sent, including the ability to output the data as a CSV via USB
+* usable for ESP8266 and Arduino Feather M0 (LoRa)
 
-ToDo's:
-* Optimierungen (eigentlich immer)
+Todos:
+* Optimizations (actually always)
 
-Die grundsätzliche Konfiguration der Parameter erfolgt über die Datei `ext_dev.h`.
+The basic configuration of the parameters is done via the file `ext_dev.h`.
 
-## WLAN Konfiguration
-siehe auch Wiki-Seite auf Github [Konfiguration der Sensoren](https://github.com/opendata-stuttgart/meta/wiki/Konfiguration-der-Sensoren)
+## WLAN configuration
+see also wiki page on Github [Configuration of the sensors] (https://github.com/opendata-stuttgart/meta/wiki/Konfiguration-der-Sensoren)
 
-Wenn das vorgegebene WLAN nach 10 Sekunden nicht erreichbar ist, wird ein Access-Point eingerichtet, der über "Feinstaubsensor-\[Sensor-ID\]" erreichbar ist. Nach dem Verbinden zu diesem Accesspoint sollten alle Anfragen auf die Konfigurationsseite umgeleitet werden. Direkte Adresse der Seite ist http://192.168.4.1/ .
+If the default WLAN can not be reached after 10 seconds, an access point is set up which can be reached via "Particulate matter sensor - \ [Sensor-ID \]". After connecting to this access point, all requests should be redirected to the configuration page. Direct address of the page is http://192.168.4.1/.
 
-Konfigurierbar sind:
-* WLAN-Name und Passwort
-* Auszulesende Sensoren
-* Ziele für den Versand der Daten
+Configurable are:
+* Wi-Fi name and password
+* Sensors to be read
+* Targets for sending the data
 
-Nach 5 Minuten sollte der Access-Point wieder deaktiviert werden (funktioniert zur Zeit noch nicht stabil).
+After 5 minutes the access point should be deactivated again (does not work at the moment).
 
 
-## Speichern als CSV
+## Save as CSV
 
-Die Daten können als CSV via USB ausgegeben werden. Dafür sollte sowohl in ext_def.h als auch in der WLAN-Konfiguration Debug auf 0 gesetzt werden, damit die ausgegebenen Daten nur noch die Sensordaten sind. Beim Neustart des ESP8266 erscheinen dann nur noch ein paar wenige Zeichen, die den Startzustand darstellen.
+The data can be output as CSV via USB. For this purpose debug should be set to 0 both in ext_def.h and in the WLAN configuration, so that the output data is only the sensor data. When restarting the ESP8266, only a few characters will appear that represent the start state.
 
 ## Wiring
 
-* SDS and DHT wiring: [https://raw.githubusercontent.com/opendata-stuttgart/meta/master/files/nodemcu-v3-schaltplan-sds011.jpg](https://raw.githubusercontent.com/opendata-stuttgart/meta/master/files/nodemcu-v3-schaltplan-sds011.jpg)
+* SDS and DHT wiring: [https://raw.githubusercontent.com/opendata-stuttgart/meta/master/files/nodemcu-v3-schaltplan-sds011.jpg](https://raw.githubusercontent.com/opendata- Stuttgart / meta / master / files / nodemcu v3 Schematic sds011.jpg)
 
-## Benötigte Software (in Klammern getestete Version und die Art der Lizenz):
+## Required software (version tested in brackets and the type of license):
 
-* [Arduino IDE](https://www.arduino.cc/en/Main/Software)  (Version 1.8.3) (GNU Lesser General Public License v2.1)
-* [ESP8266 für Arduino](http://arduino.esp8266.com/stable/package_esp8266com_index.json) (Version 2.3.0)
+* [Arduino IDE] (https://www.arduino.cc/en/Main/Software) (Version 1.8.3) (GNU Lesser General Public License v2.1)
+* [ESP8266 for Arduino] (http://arduino.esp8266.com/stable/package_esp8266com_index.json) (Version 2.3.0)
 
-### Verwendete Bibliotheken (für ESP8266):
+### Libraries Used (for ESP8266):
 
-In Arduino enthalten:
+Included in Arduino:
 * Wire (GNU Lesser General Public License v2.1)
 
-In ESP8266 für Arduino IDE enthalten:
-* FS (GNU Lesser Public License >=2.1)
-* ESP8266WiFi (GNU Lesser Public License >=2.1)
-* ESP8266WebServer (GNU Lesser Public License >=2.1)
-* ESP8266httpUpdate (1.1.0) (GNU Lesser Public License >=2.1)
-* DNSServer (GNU Lesser Public License >=2.1)
+Included in ESP8266 for Arduino IDE:
+* FS (GNU Lesser Public License> = 2.1)
+* ESP8266WiFi (GNU Lesser Public License> = 2.1)
+* ESP8266 Web Server (GNU Lesser Public License> = 2.1)
+* ESP8266httpUpdate (1.1.0) (GNU Lesser Public License> = 2.1)
+* DNS server (GNU Lesser Public License> = 2.1)
 
-Installierbar über Arduino IDE (Menü Sketch -> Bibliothek einbinden -> Bibliotheken verwalten, in Klammern die getestete Version und die Art der Lizenz):
-* [ArduinoJson](https://github.com/bblanchon/ArduinoJson) (5.11.1) (MIT)
-* [Adafruit Unified Sensor](https://github.com/adafruit/Adafruit_Sensor) (1.0.2) (Apache)
-* [Adafruit BMP085 library](https://github.com/adafruit/Adafruit-BMP085-Library) (1.0.0) (BSD)
-* [Adafruit BMP280 library](https://github.com/adafruit/Adafruit_BMP280_Library) (1.0.2) (BSD)
-* [Adafruit BME280 library](https://github.com/adafruit/Adafruit_BME280_Library) (1.0.5) (BSD)
-* [DallasTemperature](https://github.com/milesburton/Arduino-Temperature-Control-Library) (3.7.6)
-* [DHT sensor library](https://github.com/adafruit/DHT-sensor-library) (1.3.0) (MIT)
-* [ESP8266 and ESP32 Oled driver for SSD1306 display](https://github.com/squix78/esp8266-oled-ssd1306) (3.2.7) (MIT)
-* [LiquidCrystal I2C](https://github.com/marcoschwartz/LiquidCrystal_I2C) (1.1.2)
-* [SparkFun HTU21D Humidity and Temperature Sensor Breakout](https://github.com/sparkfun/SparkFun_HTU21D_Breakout_Arduino_Library) (1.1.3)
-* [PubSubClient](http://pubsubclient.knolleary.net/) (2.6.0) (MIT)
-* [SoftwareSerial](https://github.com/plerup/espsoftwareserial) (1.0.0) (GNU Lesser Public License >=2.1)
+Installable via Arduino IDE (Menu Sketch -> Include Library -> Manage Libraries, in brackets the tested version and the type of license):
+* [ArduinoJson] (https://github.com/bblanchon/ArduinoJson) (5.11.1) (MIT)
+* [Adafruit Unified Sensor] (https://github.com/adafruit/Adafruit_Sensor) (1.0.2) (Apache)
+* [Adafruit BMP085 library] (https://github.com/adafruit/Adafruit-BMP085-Library) (1.0.0) (BSD)
+* [Adafruit BMP280 library] (https://github.com/adafruit/Adafruit_BMP280_Library) (1.0.2) (BSD)
+* [Adafruit BME280 library] (https://github.com/adafruit/Adafruit_BME280_Library) (1.0.5) (BSD)
+* [DallasTemperature] (https://github.com/milesburton/Arduino-Temperature-Control-Library) (3.7.6)
+* [DHT sensor library] (https://github.com/adafruit/DHT-sensor-library) (1.3.0) (MIT)
+* [ESP8266 and ESP32 Oled driver for SSD1306 display] (https://github.com/squix78/esp8266-oled-ssd1306) (3.2.7) (MIT)
+* [LiquidCrystal I2C] (https://github.com/marcoschwartz/LiquidCrystal_I2C) (1.1.2)
+* [SparkFun HTU21D Humidity and Temperature Sensor Breakout] (https://github.com/sparkfun/SparkFun_HTU21D_Breakout_Arduino_Library) (1.1.3)
+* [PubSubClient] (http://pubsubclient.knolleary.net/) (2.6.0) (MIT)
+* [SoftwareSerial] (https://github.com/plerup/espsoftwareserial) (1.0.0) (GNU Lesser Public License> = 2.1)
 
-Manuell zu installieren:
-* [TinyGPS++](http://arduiniana.org/libraries/tinygpsplus/) (0.94b) (GNU Lesser Public License >=2.1)
-
-
-Bis Version NRZ-2016-15:
-* [DHT](https://github.com/adafruit/DHT-sensor-library)
-  (`DHT.cpp` und `DHT.h` downloaden und in das Softwareverzeichnis kopieren)
+Manually install:
+* [TinyGPS ++] (http://arduiniana.org/libraries/tinygpsplus/) (0.94b) (GNU Lesser Public License> = 2.1)
 
 
-## Anschluss der Sensoren
+Until version NRZ-2016-15:
+* [DHT] (https://github.com/adafruit/DHT-sensor-library)
+  Download (`DHT.cpp` and` DHT.h` and copy to the software directory)
 
-Beim Anschluss von Sensoren mit 5V bitte die Board-Version beachten. NodeMCU v3 liefert 5V an `VU`, Version 2 fehlt dieser Anschluss und `VIN` kann dafür genutzt werden.
+
+## Connection of the sensors
+
+When connecting sensors with 5V, please note the board version. NodeMCU v3 delivers 5V to `VU`, version 2 lacks this connector and` VIN` can be used for it.
 
 ### PPD42NS
 * Pin 1 => GND
@@ -86,56 +86,56 @@ Beim Anschluss von Sensoren mit 5V bitte die Board-Version beachten. NodeMCU v3 
 
 ### DHT22
 * Pin 1 => 3V3
-* Pin 2 => Pin D7 / GPIO13
+* Pin 2 => pin D7 / GPIO13
 * Pin 3 => unused
 * Pin 4 => GND
 
 ### SDS011
-* Pin 1 (TX)   -> Pin D1 / GPIO5
-* Pin 2 (RX)   -> Pin D2 / GPIO4
-* Pin 3 (GND)  -> GND
+* Pin 1 (TX) -> Pin D1 / GPIO5
+* Pin 2 (RX) -> Pin D2 / GPIO4
+* Pin 3 (GND) -> GND
 * Pin 4 (2.5m) -> unused
-* Pin 5 (5V)   -> VU
-* Pin 6 (1m)   -> unused
+* Pin 5 (5V) -> VU
+* Pin 6 (1m) -> unused
 
 
 Luftdaten.info API "Pins"
-Bei Aktivierung von mehreren Sensoren, z.B. "gleichzeitig" DHT22 und PPD42NS, benötigt die API zur Zuordnung der Sensorwerte die Angabe eines Pins, an dem der Sensor (virtuell) angeschlossen ist.
-Diese Firmware definiert die Pins für die verschiedenenen Sensoren wie folgt:
-* PPD42NS => Pin 5
-* DHT22 => Pin 7
-* SDS011 => Pin 1
-* BMP180 => Pin 3
-* BMP280 => Pin 3
-* BME280 => Pin 11
-* GPS(Neo-6M) => Pin 9
+When activating multiple sensors, e.g. "simultaneously" DHT22 and PPD42NS, the API for assigning the sensor values ​​requires the specification of a pin to which the sensor (virtual) is connected.
+This firmware defines the pins for the various sensors as follows:
+* PPD42NS => pin 5
+* DHT22 => pin 7
+* SDS011 => pin 1
+* BMP180 => pin 3
+* BMP280 => pin 3
+* BME280 => pin 11
+* GPS (Neo-6M) => Pin 9
 
 
-Verwendete Bibliotheken für Adafruit Feather M0 LoRa:
+Used libraries for Adafruit Feather M0 LoRa:
 
-Für die Verwendung der Adafruit Feather Boards muss im Arduino IDE noch der Adafruit Board Index eingetragen werden. Dazu in den Einstellungen die URL
-https://adafruit.github.io/arduino-board-index/package_adafruit_index.json als zusätzliche Boardverwalter-URL eintragen. Nach einem Neustart der IDE im Boardverwalter "Adafruit SAMD boards" installieren.
+To use the Adafruit Feather Boards, you must also enter the Adafruit Board Index in the Arduino IDE. In the settings the URL
+https://adafruit.github.io/arduino-board-index/package_adafruit_index.json as an additional board administrator URL. After restarting the IDE, install in the board administrator "Adafruit SAMD boards".
 
-In Arduino enthalten:
+Included in Arduino:
 * Wire
 * SPI
 
-In "Adafruit SAMD Boards" enthalten:
+Included in "Adafruit SAMD Boards":
 
 
-Installierbar über Arduino IDE (für Versionen siehe auch ESP8266):
-* [ArduinoJson](https://github.com/bblanchon/ArduinoJson) (5.10.1) (MIT)
-* [Adafruit Unified Sensor](https://github.com/adafruit/Adafruit_Sensor) (1.0.2) (Apache)
-* [Adafruit BMP085 library](https://github.com/adafruit/Adafruit-BMP085-Library) (1.0.0) (BSD)
-* [Adafruit BMP280 library](https://github.com/adafruit/Adafruit_BMP280_Library) (1.0.2) (BSD)
-* [Adafruit BME280 library](https://github.com/adafruit/Adafruit_BME280_Library) (1.0.5) (BSD)
-* [DHT sensor library](https://github.com/adafruit/DHT-sensor-library) (1.3.0) (MIT)
-* [LiquidCrystal I2C](https://github.com/marcoschwartz/LiquidCrystal_I2C) (1.1.2)
-* [PubSubClient](http://pubsubclient.knolleary.net/) (2.6.0) (MIT)
-* [SoftwareSerial](https://github.com/plerup/espsoftwareserial) (1.0.0) (GNU Lesser Public License >=2.1)
+Installable via Arduino IDE (for versions see also ESP8266):
+* [ArduinoJson] (https://github.com/bblanchon/ArduinoJson) (5.10.1) (MIT)
+* [Adafruit Unified Sensor] (https://github.com/adafruit/Adafruit_Sensor) (1.0.2) (Apache)
+* [Adafruit BMP085 library] (https://github.com/adafruit/Adafruit-BMP085-Library) (1.0.0) (BSD)
+* [Adafruit BMP280 library] (https://github.com/adafruit/Adafruit_BMP280_Library) (1.0.2) (BSD)
+* [Adafruit BME280 library] (https://github.com/adafruit/Adafruit_BME280_Library) (1.0.5) (BSD)
+* [DHT sensor library] (https://github.com/adafruit/DHT-sensor-library) (1.3.0) (MIT)
+* [LiquidCrystal I2C] (https://github.com/marcoschwartz/LiquidCrystal_I2C) (1.1.2)
+* [PubSubClient] (http://pubsubclient.knolleary.net/) (2.6.0) (MIT)
+* [SoftwareSerial] (https://github.com/plerup/espsoftwareserial) (1.0.0) (GNU Lesser Public License> = 2.1)
 
-Manuell zu installieren:
-* [RadioHead Packet Radio library](http://www.airspayce.com/mikem/arduino/RadioHead/) (1.6.1), Link zum Download des Ziparchivs im 2. Abschnitt
-* [TinyGPS++](http://arduiniana.org/libraries/tinygpsplus/) (0.94b) (GNU Lesser Public License >=2.1)
+Manually install:
+* [RadioHead Packet Radio library] (http://www.airspayce.com/mikem/arduino/RadioHead/) (1.6.1), link to download the zip archive in section 2
+* [TinyGPS ++] (http://arduiniana.org/libraries/tinygpsplus/) (0.94b) (GNU Lesser Public License> = 2.1)
 
-Ich hoffe, alle Bibliotheken erwischt zu haben. Falls beim Kompilieren eine Bibliothek fehlt, bitte als [Issue](https://github.com/opendata-stuttgart/sensors-software/issues/) melden. Ich trage dann die Infos nach.
+I hope to have caught all the libraries. If a library is missing when compiling, please report as [Issue] (https://github.com/opendata-stuttgart/sensors-software/issues/). I then carry the information.
